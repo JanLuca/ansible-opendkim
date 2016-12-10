@@ -4,6 +4,7 @@ opendkim_config_directory:   '/etc/opendkim'
 opendkim_config_file:        '{{ opendkim_config_directory }}/opendkim.conf'
 opendkim_systemd_unit_name:  'opendkim'
 opendkim_systemd_file:       '/etc/systemd/system/{{ opendkim_systemd_unit_name }}.service'
+opendkim_systemd_enable_link: '/etc/systemd/system/multi-user.target.wants/opendkim.service'
 
 opendkim_mode:               's'
 opendkim_keylength:           4096

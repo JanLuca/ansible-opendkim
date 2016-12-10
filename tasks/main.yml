@@ -189,6 +189,20 @@
   when: opendkim_postfix_enable and not (opendkim_postfix_non_smtpd_milters_contains_opendkim.stdout | match("non_smtpd_milters"))
   notify: Reload Postfix
 
+- name: Check systemd enable link
+  stat:
+    path: '{{ opendkim_systemd_enable_link }}'
+  register: opendkim_systemd_enable_link_stat
+  changed_when: False
+
+- name: Disable systemd unit if link target is wrong
+  systemd:
+    name:          '{{ opendkim_systemd_unit_name }}'
+    state:         stopped
+    daemon_reload: yes
+    enabled:       no
+  when: 'not opendkim_travis_ci_mode and (not opendkim_systemd_enable_link_stat.stat.islnk or (opendkim_systemd_enable_link_stat.stat.islnk and opendkim_systemd_enable_link_stat.stat.lnk_source != "{{ opendkim_systemd_file }}"))'
+
 - name: Enable and start OpenDKIM
   systemd:
     name:          '{{ opendkim_systemd_unit_name }}'
