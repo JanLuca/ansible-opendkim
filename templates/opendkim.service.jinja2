@@ -13,6 +13,25 @@ ExecReload=/bin/kill -USR1 $MAINPID
 Restart=on-failure
 RuntimeDirectory=opendkim
 RuntimeDirectoryMode=0750
+CapabilityBoundingSet=~CAP_SYS_ADMIN CAP_NET_ADMIN CAP_SYS_BOOT CAP_SYS_CHROOT CAP_SYS_MODULE CAP_SYS_TIME
+SystemCallFilter=~@mount @privileged @module @cpu-emulation @clock
+ReadWritePaths={{ opendkim_tmp_directory }} {{ opendkim_user_home }}
+ProtectSystem=strict
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+NoNewPrivileges=yes
+ProtectKernelModules=yes
+MemoryDenyWriteExecute=yes
+MemoryDenyWriteExecute=yes
+{% if opendkim_request_reports %}
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+{% else %}
+RestrictAddressFamilies=AF_UNIX
+PrivateNetwork=yes
+{% endif %}
 
 [Install]
 WantedBy=multi-user.target

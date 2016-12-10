@@ -66,7 +66,7 @@
     force: yes
   notify: Restart OpenDKIM
 
-- name: Generate file for hosts trusted
+- name: Generate file for trusted hosts
   template:
     src:    trusted.jinja2
     dest:   '{{ opendkim_file_trusted }}'
@@ -83,7 +83,7 @@
     group:  root
     mode:   '{{ opendkim_file_signing_table_mode }}'
 
-- name: Generate file for signing table
+- name: Generate file for key table
   template:
     src:    key.table.jinja2
     dest:   '{{ opendkim_file_key_table }}'
