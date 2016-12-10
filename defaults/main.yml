@@ -45,6 +45,8 @@ opendkim_postfix_enable:      True
 opendkim_postfix_config:     '/etc/postfix/main.cf'
 opendkim_postfix_service_name: 'postfix'
 
+opendkim_travis_ci_mode:      False
+
 opendkim_trusted_list:
 - 127.0.0.1
 - ::1

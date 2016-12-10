@@ -195,3 +195,4 @@
     state:         started
     daemon_reload: yes
     enabled:       yes
+  when: not opendkim_travis_ci_mode
