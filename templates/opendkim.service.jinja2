@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenDKIM DomainKeys Identified Mail (DKIM) Milter
+Documentation=man:opendkim(8) man:opendkim.conf(5) man:opendkim-genkey(8) man:opendkim-genzone(8) man:opendkim-testadsp(8) man:opendkim-testkey http://www.opendkim.org/docs.html
+After=network.target nss-lookup.target 
+
+[Service]
+Type=forking
+PIDFile={{ opendkim_pid_file }}
+User={{ opendkim_user }}
+Group={{ opendkim_group }}
+ExecStart=/usr/sbin/opendkim -x {{ opendkim_config_file }}
+ExecReload=/bin/kill -USR1 $MAINPID
+Restart=on-failure
+RuntimeDirectory=opendkim
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=multi-user.target

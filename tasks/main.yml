@@ -1,0 +1,197 @@
+---
+
+- name: Install openssl, opendkim and opendkim-tools
+  apt:
+    name: '{{item}}'
+  with_items:
+  - openssl
+  - opendkim
+  - opendkim-tools
+  when: ansible_os_family == 'Debian'
+
+- name: Delete standard config file if other path is used
+  file:  
+    path:  /etc/opendkim.conf
+    state: absent
+  when: opendkim_config_file != '/etc/opendkim.conf'
+
+- name: Remove init.d config file
+  file:
+    path:  /etc/init.d/opendkim
+    state: absent
+
+- name: Create opendkim group
+  group:
+    name:   '{{ opendkim_group }}'
+    system: yes
+
+- name: Create opendkim user
+  user:
+    name:   '{{ opendkim_user }}'
+    group:  '{{ opendkim_group }}'
+    home:   '{{ opendkim_user_home }}'
+    system: yes
+  register: opendkim_user_created
+
+- name: Change ownership of opendkim user home
+  file:
+    path:    '{{ opendkim_user_home }}'
+    owner:   '{{ opendkim_user }}'
+    group:   '{{ opendkim_group }}'
+    recurse: yes
+  when: opendkim_user_created.changed
+
+- name: Create config directory
+  file:
+    path:  '{{ opendkim_config_directory }}'
+    state: directory
+
+- name: Copy opendkim.conf file to server
+  template:
+    src:   opendkim.conf.jinja2
+    dest:  '{{ opendkim_config_file }}'
+    owner: root
+    group: root
+    mode:  0644
+    force: yes
+  notify: Restart OpenDKIM
+
+- name: Copy opendkim.service file to server
+  template:
+    src:   opendkim.service.jinja2
+    dest:  '{{ opendkim_systemd_file }}'
+    owner: root
+    group: root
+    mode:  0644
+    force: yes
+  notify: Restart OpenDKIM
+
+- name: Generate file for hosts trusted
+  template:
+    src:    trusted.jinja2
+    dest:   '{{ opendkim_file_trusted }}'
+    owner:  '{{ opendkim_user }}'
+    group:  root
+    mode:   '{{ opendkim_file_trusted_mode }}'
+    force:  yes
+
+- name: Generate file for signing table
+  template:
+    src:    signing.table.jinja2
+    dest:   '{{ opendkim_file_signing_table }}'
+    owner:  '{{ opendkim_user }}'
+    group:  root
+    mode:   '{{ opendkim_file_signing_table_mode }}'
+
+- name: Generate file for signing table
+  template:
+    src:    key.table.jinja2
+    dest:   '{{ opendkim_file_key_table }}'
+    owner:  '{{ opendkim_user }}'
+    group:  root
+    mode:   '{{ opendkim_file_key_table_mode }}'
+
+- name: Ensure keys directory is available
+  file:
+    path:  '{{ opendkim_config_directory }}/keys'
+    owner: '{{ opendkim_user }}'
+    group: root
+    mode:  0700
+    state: directory
+
+- name: Ensure keys directories for the domains are available
+  file:
+    path:  '{{ opendkim_config_directory }}/keys/{{ item.domainname }}'
+    owner: '{{ opendkim_user }}'
+    group: root
+    mode:  0700
+    state: directory
+  with_items: '{{ opendkim_domain_list }}'
+
+- name: Create keys for the domains
+  command: opendkim-genkey -b {{ opendkim_keylength }} -d {{ item.domainname }} -r -s {{ item.selector }}
+  args:
+    chdir:   '{{ opendkim_config_directory }}/keys/{{ item.domainname }}'
+    creates: '{{ opendkim_config_directory }}/keys/{{ item.domainname }}/{{ item.selector }}.private'
+  with_items: '{{ opendkim_domain_list }}'
+
+- name: 'Postfix config: Set milter_default_action to accept'
+  lineinfile:
+    dest:   '{{ opendkim_postfix_config }}'
+    regexp: '^milter_default_action'
+    line:   'milter_default_action = accept'
+  when: opendkim_postfix_enable
+  notify: Reload Postfix
+
+- name: 'Postfix config: Set milter_protocol to version 6'
+  lineinfile:
+    dest:   '{{ opendkim_postfix_config }}'
+    regexp: '^milter_protocol'
+    line:   'milter_protocol = 6'
+  when: opendkim_postfix_enable
+  notify: Reload Postfix
+
+- name: 'Postfix config: Check whether config contains "smtpd_milters"'
+  command: 'awk /^smtpd_milters/ {{ opendkim_postfix_config }}'
+  register: opendkim_postfix_contains_smtpd_milters
+  changed_when: False
+  when: opendkim_postfix_enable
+
+- name: 'Postfix config: Add OpenDKIM as smtpd_milters (add line)'
+  lineinfile:
+    dest:     '{{ opendkim_postfix_config }}'
+    line:     'smtpd_milters = {% if opendkim_use_unix_socket %}unix:{{ opendkim_unix_socket_path }}{% else %}inet:{{ opendkim_bind_ip }}:{{ opendkim_port }}{% endif %}'
+  when: opendkim_postfix_enable and not (opendkim_postfix_contains_smtpd_milters.stdout | match("smtpd_milters"))
+  notify: Reload Postfix
+
+- name: 'Postfix config: Check whether smtpd_milters contains OpenDKIM'
+  shell: 'grep "^smtpd_milters" {{ opendkim_postfix_config }} | grep -w "{% if opendkim_use_unix_socket %}unix:{{ opendkim_unix_socket_path }}{% else %}inet:{{ opendkim_bind_ip }}:{{ opendkim_port }}{% endif %}"'
+  register: opendkim_postfix_smtpd_milters_contains_opendkim
+  changed_when: False
+  failed_when:  False
+  when: opendkim_postfix_enable
+
+- name: 'Postfix config: Add OpenDKIM as smtpd_milters (modify line)'
+  lineinfile:
+    dest:     '{{ opendkim_postfix_config }}'
+    regexp:   '^(smtpd_milters.*)'
+    line:     '\1, {% if opendkim_use_unix_socket %}unix:{{ opendkim_unix_socket_path }}{% else %}inet:{{ opendkim_bind_ip }}:{{ opendkim_port }}{% endif %}'
+    backrefs: yes
+  when: opendkim_postfix_enable and not (opendkim_postfix_smtpd_milters_contains_opendkim.stdout | match("smtpd_milters"))
+  notify: Reload Postfix
+
+- name: 'Postfix config: Check whether config contains "non_smtpd_milters"'
+  command: 'awk /^non_smtpd_milters/ {{ opendkim_postfix_config }}'
+  register: opendkim_postfix_contains_non_smtpd_milters
+  changed_when: False
+  when: opendkim_postfix_enable
+
+- name: 'Postfix config: Add OpenDKIM as non_smtpd_milters (add line)'
+  lineinfile:
+    dest:     '{{ opendkim_postfix_config }}'
+    line:     'non_smtpd_milters = {% if opendkim_use_unix_socket %}unix:{{ opendkim_unix_socket_path }}{% else %}inet:{{ opendkim_bind_ip }}:{{ opendkim_port }}{% endif %}'
+  when: opendkim_postfix_enable and not (opendkim_postfix_contains_non_smtpd_milters.stdout | match("non_smtpd_milters"))
+  notify: Reload Postfix
+
+- name: 'Postfix config: Check whether non_smtpd_milters contains OpenDKIM'
+  shell: 'grep "^non_smtpd_milters" {{ opendkim_postfix_config }} | grep -w "{% if opendkim_use_unix_socket %}unix:{{ opendkim_unix_socket_path }}{% else %}inet:{{ opendkim_bind_ip }}:{{ opendkim_port }}{% endif %}"'
+  register: opendkim_postfix_non_smtpd_milters_contains_opendkim
+  changed_when: False
+  failed_when:  False
+  when: opendkim_postfix_enable
+
+- name: 'Postfix config: Add OpenDKIM as non_smtpd_milters (modify line)'
+  lineinfile:
+    dest:     '{{ opendkim_postfix_config }}'
+    regexp:   '^(non_smtpd_milters.*)'
+    line:     '\1, {% if opendkim_use_unix_socket %}unix:{{ opendkim_unix_socket_path }}{% else %}inet:{{ opendkim_bind_ip }}:{{ opendkim_port }}{% endif %}'
+    backrefs: yes
+  when: opendkim_postfix_enable and not (opendkim_postfix_non_smtpd_milters_contains_opendkim.stdout | match("non_smtpd_milters"))
+  notify: Reload Postfix
+
+- name: Enable and start OpenDKIM
+  systemd:
+    name:          '{{ opendkim_systemd_unit_name }}'
+    state:         started
+    daemon_reload: yes
+    enabled:       yes

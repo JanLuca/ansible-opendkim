@@ -1,0 +1,58 @@
+Mode                    {{ opendkim_mode }}
+{% if opendkim_use_unix_socket %}
+Socket                  local:{{ opendkim_unix_socket_path }}
+{% else %}
+Socket                  inet:{{ opendkim_port }}@{{ opendkim_bind_ip }}
+{% endif %}
+
+# Set parameters of opendkim user
+UserID                  {{ opendkim_user }}:{{ opendkim_group }}
+UMask                   {{ opendkim_umask }}
+PidFile                 {{ opendkim_pid_file }}
+BaseDirectory           {{ opendkim_base_directory }}
+TemporaryDirectory      {{ opendkim_tmp_directory }}
+
+# Restart the service on failure?
+{% if opendkim_auto_restart %}
+AutoRestart             yes
+AutoRestartRate         {{ opendkim_auto_restart_rate }}
+
+{% else %}
+AutoRestart             no
+{% endif %}
+
+# Logging
+{% if opendkim_syslog_enable %}
+Syslog                  yes
+SyslogSuccess           {% if opendkim_syslog_log_success %} yes {% else %} no {% endif %}
+LogWhy                  {% if opendkim_syslog_log_why %} yes {% else %} no {% endif %}
+{% else %}
+Syslog                  no
+{% endif %}
+
+# Canonicalization of the mail header and body
+Canonicalization        {{ opendkim_canonicalization }}
+
+# List of trusted domains
+ExternalIgnoreList      refile:{{ opendkim_file_trusted }}
+InternalHosts           refile:{{ opendkim_file_trusted }}
+
+# Domains that should be signed (refile means the
+# table is interpreted as wildcard patterns)
+SigningTable            refile:{{ opendkim_file_signing_table }}
+KeyTable                {{ opendkim_file_key_table }}
+
+SignatureAlgorithm      {{ opendkim_signature_algorithm }}
+
+# Always oversign From (sign using actual From and a null From to prevent
+# malicious signatures header fields (From and/or others) between the signer
+# and the verifier.  From is oversigned by default in the Debian pacakge
+# because it is often the identity key used by reputation systems and thus
+# somewhat security sensitive.
+OversignHeaders         From
+
+{% if opendkim_request_reports %}
+# When signing, includes a request for signature evaluation failures in
+# the signature.  (See RFC6651 for details.)
+RequestReports          yes
+{% endif %}

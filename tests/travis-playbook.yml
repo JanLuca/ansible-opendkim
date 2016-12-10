@@ -1,0 +1,11 @@
+---
+
+- hosts: all
+  remote_user: root
+  roles:
+  - role: ansible-opendkim
+    server_name: 'localhost'
+    opendkim_domain_list:
+     - match:      '*@example.org'
+       domainname: 'example.org'
+       selector:   '19700101'

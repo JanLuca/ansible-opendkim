@@ -1,0 +1,4 @@
+---
+
+- src: https://github.com/JanLuca/ansible-postfix.git
+  name: postfix

@@ -1,0 +1,13 @@
+---
+
+- name: Reload Postfix
+  service:
+    name:          '{{ opendkim_postfix_service_name }}'
+    state:         reloaded
+
+- name: Restart OpenDKIM
+  systemd:
+    name:          '{{ opendkim_systemd_unit_name }}'
+    state:         restarted
+    daemon_reload: yes   
+  

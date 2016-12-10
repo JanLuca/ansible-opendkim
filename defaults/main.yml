@@ -1,0 +1,57 @@
+---
+
+opendkim_config_directory:   '/etc/opendkim'
+opendkim_config_file:        '{{ opendkim_config_directory }}/opendkim.conf'
+opendkim_systemd_unit_name:  'opendkim'
+opendkim_systemd_file:       '/etc/systemd/system/{{ opendkim_systemd_unit_name }}.service'
+
+opendkim_mode:               's'
+opendkim_keylength:           4096
+
+opendkim_use_unix_socket:     True
+opendkim_unix_socket_path:   '/var/run/opendkim/opendkim.sock'
+opendkim_port:               '8891'
+opendkim_bind_ip:            'localhost'
+
+opendkim_user:               'opendkim'
+opendkim_group:              'opendkim'
+opendkim_user_home:          '/var/run/opendkim'
+opendkim_umask:              '002'
+opendkim_pid_file:           '/var/run/opendkim/opendkim.pid'
+opendkim_base_directory:     '{{ opendkim_user_home }}'
+opendkim_tmp_directory:      '/run/opendkim'
+
+opendkim_auto_restart:        False
+opendkim_auto_restart_rate:  '10/1h'
+
+opendkim_syslog_enable:       True
+opendkim_syslog_log_success:  True
+opendkim_syslog_log_why:      False
+
+opendkim_canonicalization:   'relaxed/simple'
+
+opendkim_file_trusted:       '{{ opendkim_config_directory }}/trusted'
+opendkim_file_trusted_mode:   0640
+opendkim_file_signing_table: '{{ opendkim_config_directory }}/signing.table'
+opendkim_file_signing_table_mode:   0640
+opendkim_file_key_table:     '{{ opendkim_config_directory }}/key.table'
+opendkim_file_key_table_mode: 0600
+
+opendkim_signature_algorithm: 'rsa-sha256'
+
+opendkim_request_reports:     False
+
+opendkim_postfix_enable:      True
+opendkim_postfix_config:     '/etc/postfix/main.cf'
+opendkim_postfix_service_name: 'postfix'
+
+opendkim_trusted_list:
+- 127.0.0.1
+- ::1
+- localhost
+
+# Example domain list
+# opendkim_domain_list:
+# - match:      '*@example.org'
+#   domainname: 'example.org'
+#   selector:   'yyyymmdd'
