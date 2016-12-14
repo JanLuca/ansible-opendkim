@@ -6,6 +6,14 @@ opendkim_systemd_unit_name:  'opendkim'
 opendkim_systemd_file:       '/etc/systemd/system/{{ opendkim_systemd_unit_name }}.service'
 opendkim_systemd_enable_link: '/etc/systemd/system/multi-user.target.wants/opendkim.service'
 
+opendkim_postfix_enable:      True
+opendkim_postfix_config:     '/etc/postfix/main.cf'
+opendkim_postfix_service_name: 'postfix'
+opendkim_postfix_chroot_path: '/var/spool/postfix/opendkim'
+opendkim_postfix_create_chroot_path: True
+opendkim_postfix_socket_path: '/opendkim/opendkim.sock'
+opendkim_postfix_user:       'postfix'
+
 opendkim_mode:               's'
 opendkim_keylength:           4096
 
@@ -18,7 +26,7 @@ opendkim_base_directory:     '{{ opendkim_user_home }}'
 opendkim_tmp_directory:      '/run/opendkim'
 
 opendkim_use_unix_socket:     True
-opendkim_unix_socket_path:   '{{ opendkim_user_home }}/opendkim.sock'
+opendkim_unix_socket_path:   '{% if opendkim_postfix_enable %}{{ opendkim_postfix_chroot_path }}{% else %}{{ opendkim_user_home }}{% endif %}/opendkim.sock'
 opendkim_port:               '8891'
 opendkim_bind_ip:            'localhost'
 
@@ -41,10 +49,6 @@ opendkim_file_key_table_mode: 0600
 opendkim_signature_algorithm: 'rsa-sha256'
 
 opendkim_request_reports:     False
-
-opendkim_postfix_enable:      True
-opendkim_postfix_config:     '/etc/postfix/main.cf'
-opendkim_postfix_service_name: 'postfix'
 
 opendkim_travis_ci_mode:      False
 
