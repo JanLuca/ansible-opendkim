@@ -208,6 +208,7 @@
 - name: Check systemd enable link
   shell: '[ "$(readlink {{ opendkim_systemd_enable_link }})" = {{ opendkim_systemd_file }} ]'
   register: opendkim_systemd_enable_link_stat
+  failed_when:  False
   changed_when: False
 
 - name: Disable systemd unit if link target is wrong
