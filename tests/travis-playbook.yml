@@ -6,6 +6,9 @@
   - role: ansible-opendkim
     server_name: 'localhost'
     postfix_mail_domain: 'localhost'
+    postfix_mail_domains:
+    - localhost
+    postfix_myhostname: mail.localhost
     opendkim_travis_ci_mode: True
     opendkim_domain_list:
      - match:      '*@example.org'
