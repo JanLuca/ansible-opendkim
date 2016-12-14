@@ -115,6 +115,13 @@
     creates: '{{ opendkim_config_directory }}/keys/{{ item.domainname }}/{{ item.selector }}.private'
   with_items: '{{ opendkim_domain_list }}'
 
+- name: Change ownership of keys files
+  file:
+    path:    '{{ opendkim_config_directory }}/keys'
+    owner:   '{{ opendkim_user }}'
+    recurse: yes
+    state:   directory
+
 - name: 'Postfix config: Set milter_default_action to accept'
   lineinfile:
     dest:   '{{ opendkim_postfix_config }}'
