@@ -115,6 +115,34 @@
     creates: '{{ opendkim_config_directory }}/keys/{{ item.domainname }}/{{ item.selector }}.private'
   with_items: '{{ opendkim_domain_list }}'
 
+- name: Ensure DNS records directory is available
+  file:
+    path:  '{{ opendkim_config_directory }}/dns'
+    owner: root
+    group: root
+    mode:  0755
+    state: directory
+
+- name: Ensure DNS records directories for the domains are available
+  file:
+    path:  '{{ opendkim_config_directory }}/dns/{{ item.domainname }}'
+    owner: root
+    group: root
+    mode:  0755
+    state: directory
+  with_items: '{{ opendkim_domain_list }}'
+
+- name: Copy DNS records to DNS records directory
+  copy:
+    src:   '{{ opendkim_config_directory }}/keys/{{ item.domainname }}/{{ item.selector }}.txt'
+    dest:  '{{ opendkim_config_directory }}/dns/{{ item.domainname }}/{{ item.selector }}.txt'
+    owner: root
+    group: root
+    mode:  0644
+    remote_src: True
+    force: yes
+  with_items: '{{ opendkim_domain_list }}'
+
 - name: Change ownership of keys files
   file:
     path:    '{{ opendkim_config_directory }}/keys'
