@@ -74,6 +74,7 @@
     group:  root
     mode:   '{{ opendkim_file_trusted_mode }}'
     force:  yes
+  notify: Restart OpenDKIM
 
 - name: Generate file for signing table
   template:
@@ -82,6 +83,7 @@
     owner:  '{{ opendkim_user }}'
     group:  root
     mode:   '{{ opendkim_file_signing_table_mode }}'
+  notify: Restart OpenDKIM
 
 - name: Generate file for key table
   template:
@@ -90,6 +92,7 @@
     owner:  '{{ opendkim_user }}'
     group:  root
     mode:   '{{ opendkim_file_key_table_mode }}'
+  notify: Restart OpenDKIM
 
 - name: Ensure keys directory is available
   file:
@@ -114,6 +117,7 @@
     chdir:   '{{ opendkim_config_directory }}/keys/{{ item.domainname }}'
     creates: '{{ opendkim_config_directory }}/keys/{{ item.domainname }}/{{ item.selector }}.private'
   with_items: '{{ opendkim_domain_list }}'
+  notify: Restart OpenDKIM
 
 - name: Ensure DNS records directory is available
   file:
