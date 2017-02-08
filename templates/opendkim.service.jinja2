@@ -25,11 +25,7 @@ ProtectControlGroups=yes
 NoNewPrivileges=yes
 ProtectKernelModules=yes
 MemoryDenyWriteExecute=yes
-MemoryDenyWriteExecute=yes
-{% if opendkim_request_reports or opendkim_mode.find('v') != -1 %}
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-{% else %}
-RestrictAddressFamilies=AF_UNIX
+{% if not (opendkim_request_reports or opendkim_mode.find('v') != -1) %}
 PrivateNetwork=yes
 {% endif %}
 
